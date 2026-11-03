@@ -4,6 +4,8 @@ export class GithubInfo {
     private readonly _repo: string;
     private readonly _githubFileName: string;
     private _releases: string[] = [];
+    // tag -> download url of the matching asset (asset names have changed case between releases)
+    private _assetUrls = new Map<string, string>();
     private _pending: Promise<void> | null = null;
 
     constructor(repo: string, githubFileName: string) {
@@ -20,7 +22,7 @@ export class GithubInfo {
     }
 
     public getDownloadLink(version: string): string {
-        return `${this.downloadPath}/${version}/${this._githubFileName}`;
+        return this._assetUrls.get(version) ?? `${this.downloadPath}/${version}/${this._githubFileName}`;
     }
 
     public async fetch(): Promise<void> {
@@ -44,9 +46,14 @@ export class GithubInfo {
             return;
         }
 
-        this._releases = data
-            .filter((release: any) => !release.draft && release.assets?.some((a: any) => a.name === this._githubFileName))
-            .map((release: any) => release.tag_name as string);
+        const wanted = this._githubFileName.toLowerCase();
+        this._assetUrls.clear();
+        for (const release of data) {
+            if (release.draft) continue;
+            const asset = release.assets?.find((a: any) => a.name?.toLowerCase() === wanted);
+            if (asset) this._assetUrls.set(release.tag_name, asset.browser_download_url);
+        }
+        this._releases = [...this._assetUrls.keys()];
 
         // tags are compared as versions so that e.g. 0.10.0 sorts above 0.9.0
         this._releases.sort((a, b) => {
