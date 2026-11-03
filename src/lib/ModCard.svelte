@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { createEventDispatcher } from 'svelte';
     import { errorMessage, notify, runTask } from './store';
     import { ModDatabase, type Mod } from './mods';
     import { confirmAction } from './utils';
@@ -10,21 +9,26 @@
     import UilBox from "~icons/uil/box";
     import UilExclamationTriangle from "~icons/uil/exclamation-triangle";
 
-    export let mod: Mod;
+    interface Props {
+        mod: Mod;
+        // called after the mod was installed, updated, removed or moved
+        onchanged?: () => void;
+    }
 
-    let imageFailed = false;
-    let imageLoaded = false;
-    let toggling = false;
+    let { mod, onchanged }: Props = $props();
 
-    $: isLibrary = mod.type === "Library";
-    $: installedVersion = mod.installedMod?.manifest.version;
-    $: layoutIssue = mod.installedMod?.layoutIssue;
+    let imageFailed = $state(false);
+    let imageLoaded = $state(false);
+    let toggling = $state(false);
 
-    const dispatch = createEventDispatcher<{ changed: void }>();
+    let isLibrary = $derived(mod.type === "Library");
+    let installedVersion = $derived(mod.installedMod?.manifest.version);
+    let layoutIssue = $derived(mod.installedMod?.layoutIssue);
+
 
     async function install() {
         await runTask(`Installing ${mod.name}...`, () => ModDatabase.installMod(mod), `${mod.name} installed.`);
-        dispatch("changed");
+        onchanged?.();
     }
 
     async function update() {
@@ -34,7 +38,7 @@
             await ModDatabase.uninstallMod(installed);
             await ModDatabase.installMod(mod);
         }, `${mod.name} updated to ${mod.latestVersion}.`);
-        dispatch("changed");
+        onchanged?.();
     }
 
     async function uninstall() {
@@ -42,7 +46,7 @@
         if (!(await confirmAction(`Uninstall ${mod.name}`, `Remove ${mod.name} and its files from the game?`))) return;
         const installed = mod.installedMod;
         await runTask(`Removing ${mod.name}...`, () => ModDatabase.uninstallMod(installed), `${mod.name} removed.`);
-        dispatch("changed");
+        onchanged?.();
     }
 
     async function fixLayout() {
@@ -55,7 +59,7 @@
 
 Move ${installed.modName}.dll and the ${installed.modName} folder directly into ${installed.targetFolder}?`))) return;
         await runTask(`Fixing ${mod.name}...`, () => ModDatabase.fixLayout(installed), `${mod.name} moved to the right folder.`);
-        dispatch("changed");
+        onchanged?.();
     }
 
     async function toggle() {
@@ -63,7 +67,6 @@ Move ${installed.modName}.dll and the ${installed.modName} folder directly into 
         toggling = true;
         try {
             await ModDatabase.toggleMod(mod.installedMod, !mod.installedMod.isEnabled);
-            mod = mod;
         } catch (error) {
             notify(`Couldn't change ${mod.name}: ${errorMessage(error)}`, "error");
         } finally {
@@ -84,8 +87,8 @@ Move ${installed.modName}.dll and the ${installed.modName} folder directly into 
                 alt=""
                 loading="lazy"
                 class:loaded={imageLoaded}
-                on:load={() => imageLoaded = true}
-                on:error={() => imageFailed = true}
+                onload={() => imageLoaded = true}
+                onerror={() => imageFailed = true}
             />
         {:else}
             <div class="cover-placeholder"><UilBox /></div>
@@ -101,7 +104,7 @@ Move ${installed.modName}.dll and the ${installed.modName} folder directly into 
         <div class="title-row">
             <h3 class="title" title={mod.name}>{mod.name}</h3>
             {#if !mod.isLocalOnly}
-                <button class="btn-ghost link-btn" title="View on sotf-mods.com" on:click={() => ModDatabase.openModPage(mod)}>
+                <button class="btn-ghost link-btn" title="View on sotf-mods.com" onclick={() => ModDatabase.openModPage(mod)}>
                     <UilExternalLinkAlt />
                 </button>
             {/if}
@@ -122,7 +125,7 @@ Move ${installed.modName}.dll and the ${installed.modName} folder directly into 
         <div class="layout-warning">
             <UilExclamationTriangle />
             <span>In the wrong folder, so RedLoader won't load it.</span>
-            <button class="link" on:click={fixLayout}>Fix</button>
+            <button class="link" onclick={fixLayout}>Fix</button>
         </div>
     {/if}
 
@@ -130,19 +133,19 @@ Move ${installed.modName}.dll and the ${installed.modName} folder directly into 
         {#if mod.isInstalled}
             {#if !isLibrary && mod.installedMod}
                 <label class="switch" title={mod.installedMod.isEnabled ? "Enabled — click to disable" : "Disabled — click to enable"}>
-                    <input type="checkbox" checked={mod.installedMod.isEnabled} disabled={toggling} on:change={toggle} />
+                    <input type="checkbox" checked={mod.installedMod.isEnabled} disabled={toggling} onchange={toggle} />
                     <span class="switch-track"></span>
                     <span class="switch-label">{mod.installedMod.isEnabled ? "Enabled" : "Disabled"}</span>
                 </label>
             {/if}
             <span class="spacer"></span>
             {#if mod.hasUpdate}
-                <button class="btn-info" on:click={update}><UilSync /> Update</button>
+                <button class="btn-info" onclick={update}><UilSync /> Update</button>
             {/if}
-            <button class="btn-danger" title="Uninstall" on:click={uninstall}><UilTrashAlt />{mod.hasUpdate ? "" : " Uninstall"}</button>
+            <button class="btn-danger" title="Uninstall" onclick={uninstall}><UilTrashAlt />{mod.hasUpdate ? "" : " Uninstall"}</button>
         {:else}
             <span class="spacer"></span>
-            <button class="btn-success" on:click={install}><UilArrowCircleDown /> Install</button>
+            <button class="btn-success" onclick={install}><UilArrowCircleDown /> Install</button>
         {/if}
     </div>
 </article>

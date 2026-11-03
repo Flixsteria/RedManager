@@ -3,7 +3,9 @@ import { getDirectoryPath, processName } from "./store";
 import { BaseUninstaller } from "./baseUninstaller";
 import { GithubInstaller } from "./githubInstaller";
 import { redLoaderInfo, unityExplorerInfo } from "./githubInfo";
-import { fs, invoke, path } from "@tauri-apps/api";
+import { invoke } from "@tauri-apps/api/core";
+import * as path from "@tauri-apps/api/path";
+import * as fs from "@tauri-apps/plugin-fs";
 import semver from "semver";
 
 export enum InstallMode {
@@ -53,7 +55,7 @@ export class FeatureInstaller {
             for (const folder of this.additionalFoldersToCreate) {
                 let dir = await path.join(await getDirectoryPath(), folder);
                 if(!await fs.exists(dir)) {
-                    await fs.createDir(dir, { recursive: true });
+                    await fs.mkdir(dir, { recursive: true });
                 }
             }
         }

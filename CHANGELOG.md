@@ -16,7 +16,7 @@
 - Mod Creation: supports both `dotnet new install` and the older `--install` syntax.
 - Better .NET 6 and Steam install detection.
 - Extraction is protected against archive entries that point outside the game folder.
-- Updated to Tauri 1.8, Vite 5 and the latest Svelte 4.
+- Migrated to Tauri 2 (capabilities, fs/dialog/shell/opener/upload plugins) and Svelte 5 (runes), on Vite 7.
 
 ## 1.1.9
 - Added infinite scroll instead of pre-fetching all mods.

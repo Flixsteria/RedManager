@@ -3,7 +3,11 @@
     import { isPathValid } from "../lib/store";
     import type { FeatureInstaller } from "./featureInstaller";
 
-    export let features: FeatureInstaller[] = [];
+    interface Props {
+        features?: FeatureInstaller[];
+    }
+
+    let { features = [] }: Props = $props();
 </script>
 
 {#if $isPathValid}

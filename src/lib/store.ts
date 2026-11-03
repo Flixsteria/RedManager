@@ -1,5 +1,6 @@
 import { writable, get } from 'svelte/store';
-import { path, fs } from '@tauri-apps/api'
+import * as path from "@tauri-apps/api/path";
+import * as fs from "@tauri-apps/plugin-fs";
 
 const GAME_PATH_KEY = "gameExePath";
 
@@ -78,7 +79,7 @@ export async function getDirectoryPath(): Promise<string> {
 export async function getModsDir(): Promise<string> {
     let modsDir = await path.join(await getDirectoryPath(), "Mods");
     if(!await fs.exists(modsDir)) {
-        await fs.createDir(modsDir, { recursive: true });
+        await fs.mkdir(modsDir, { recursive: true });
     }
 
     return modsDir;
@@ -87,7 +88,7 @@ export async function getModsDir(): Promise<string> {
 export async function getLibsDir(): Promise<string> {
     let libsDir = await path.join(await getDirectoryPath(), "Libs");
     if(!await fs.exists(libsDir)) {
-        await fs.createDir(libsDir, { recursive: true });
+        await fs.mkdir(libsDir, { recursive: true });
     }
 
     return libsDir;

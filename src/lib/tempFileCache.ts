@@ -1,4 +1,5 @@
-import { fs, path } from "@tauri-apps/api";
+import * as path from "@tauri-apps/api/path";
+import * as fs from "@tauri-apps/plugin-fs";
 
 export class TempFileCache {
   private static _cache: string[] = [];
@@ -6,7 +7,11 @@ export class TempFileCache {
   // This creates a temporary file and returns its path. It also keeps the path in an internal cache.
   public static async createFile(): Promise<string> {
     try {
-      const tempFilePath = await path.join(await path.appCacheDir(), `${Date.now()}.tmp`);
+      const cacheDir = await path.appCacheDir();
+      if (!(await fs.exists(cacheDir))) {
+        await fs.mkdir(cacheDir, { recursive: true });
+      }
+      const tempFilePath = await path.join(cacheDir, `${Date.now()}.tmp`);
       this._cache.push(tempFilePath);
       return tempFilePath;
     } catch (error) {
@@ -21,7 +26,7 @@ export class TempFileCache {
       try {
         if(await fs.exists(filePath))
         {
-          await fs.removeFile(filePath);
+          await fs.remove(filePath);
         }
       } catch (error) {
         console.error(`Error deleting temp file ${filePath}:`, error);

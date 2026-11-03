@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { shell } from "@tauri-apps/api";
+    import { openPath, openUrl } from "@tauri-apps/plugin-opener";
     import FeatureList from "../lib/FeatureList.svelte";
     import PathSelector from "../lib/PathSelector.svelte";
     import { loaderFeature, bieFeature, melonFeature } from "../lib/featureInstaller";
@@ -13,11 +13,11 @@
     const DOTNET_URL = "https://dotnet.microsoft.com/en-us/download/dotnet/6.0";
 
     async function openFolder() {
-        await shell.open(await getDirectoryPath());
+        await openPath(await getDirectoryPath());
     }
 
     async function startGame() {
-        await shell.open("steam://rungameid/1326470");
+        await openUrl("steam://rungameid/1326470");
     }
 </script>
 
@@ -31,7 +31,7 @@
         <div class="banner banner-warning">
             <UilExclamationTriangle />
             <span>
-                RedLoader needs the <button class="link" on:click={() => shell.open(DOTNET_URL)}>.NET 6 Desktop Runtime (x64)</button>.
+                RedLoader needs the <button class="link" onclick={() => openUrl(DOTNET_URL)}>.NET 6 Desktop Runtime (x64)</button>.
                 Install it before launching the game.
             </span>
         </div>
@@ -44,10 +44,10 @@
         <FeatureList features={[bieFeature, melonFeature, loaderFeature]} />
 
         <div class="quick-actions">
-            <button class="btn-primary" on:click={startGame}><UilPlay /> Start Game</button>
-            <button on:click={openFolder}><UilFolderOpen /> Open Game Folder</button>
+            <button class="btn-primary" onclick={startGame}><UilPlay /> Start Game</button>
+            <button onclick={openFolder}><UilFolderOpen /> Open Game Folder</button>
             <span class="spacer"></span>
-            <button class="btn-ghost" on:click={() => shell.open("https://github.com/ToniMacaroni/RedLoader")}><UilGithub /> RedLoader on GitHub</button>
+            <button class="btn-ghost" onclick={() => openUrl("https://github.com/ToniMacaroni/RedLoader")}><UilGithub /> RedLoader on GitHub</button>
         </div>
     {/if}
 </div>

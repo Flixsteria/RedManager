@@ -1,6 +1,7 @@
 <script lang="ts">
-    import { createEventDispatcher, onDestroy, onMount } from "svelte";
-    import { fs, path } from "@tauri-apps/api";
+    import { onDestroy, onMount } from "svelte";
+    import * as path from "@tauri-apps/api/path";
+    import * as fs from "@tauri-apps/plugin-fs";
     import { debounce } from "lodash";
     import { errorMessage, getDirectoryPath, isPathValid } from "../lib/store";
     import ModCard from "../lib/ModCard.svelte";
@@ -12,34 +13,39 @@
 
     type View = "browse" | "installed";
 
-    const dispatch = createEventDispatcher<{ navigate: number }>();
+    interface Props {
+        // switches the app to another tab
+        onnavigate?: (tab: number) => void;
+    }
 
-    let view: View = "browse";
-    let searchTerm = "";
-    let mods: Mod[] = [];
-    let installedMods: Mod[] = [];
+    let { onnavigate }: Props = $props();
+
+    let view: View = $state("browse");
+    let searchTerm = $state("");
+    let mods: Mod[] = $state([]);
+    let installedMods: Mod[] = $state([]);
 
     let page = 0;
     let hasMore = true;
-    let browseLoading = false;
-    let browseError: string | null = null;
-    let installedLoading = false;
-    let installedError: string | null = null;
-    let loaderMissing = false;
+    let browseLoading = $state(false);
+    let browseError: string | null = $state(null);
+    let installedLoading = $state(false);
+    let installedError: string | null = $state(null);
+    let loaderMissing = $state(false);
 
     // incremented on every reset so responses for an older search are ignored
     let browseRequest = 0;
     let browsedTerm = "";
     let installedRequest = 0;
 
-    let sentinel: HTMLDivElement;
+    let sentinel = $state<HTMLDivElement>();
     let observer: IntersectionObserver | null = null;
 
-    $: filteredInstalled = installedMods.filter(m => m.name.toLowerCase().includes(searchTerm.trim().toLowerCase()));
-    $: visibleMods = view === "browse" ? mods : filteredInstalled;
-    $: updateCount = installedMods.filter(m => m.hasUpdate).length;
-    $: isLoading = view === "browse" ? browseLoading : installedLoading;
-    $: loadError = view === "browse" ? browseError : installedError;
+    let filteredInstalled = $derived(installedMods.filter(m => m.name.toLowerCase().includes(searchTerm.trim().toLowerCase())));
+    let visibleMods = $derived(view === "browse" ? mods : filteredInstalled);
+    let updateCount = $derived(installedMods.filter(m => m.hasUpdate).length);
+    let isLoading = $derived(view === "browse" ? browseLoading : installedLoading);
+    let loadError = $derived(view === "browse" ? browseError : installedError);
 
     async function loadNextPage() {
         if (browseLoading || !hasMore || view !== "browse") return;
@@ -131,7 +137,6 @@
     async function onModChanged() {
         if (view === "browse") {
             ModDatabase.initModList(mods);
-            mods = mods;
         }
         await loadInstalled();
     }
@@ -166,7 +171,7 @@
         {#if loaderMissing}
             <div class="banner banner-warning">
                 <UilExclamationTriangle />
-                <span>RedLoader isn't installed, so mods won't load. <button class="link" on:click={() => dispatch("navigate", 0)}>Install it from the Loader tab.</button></span>
+                <span>RedLoader isn't installed, so mods won't load. <button class="link" onclick={() => onnavigate?.(0)}>Install it from the Loader tab.</button></span>
             </div>
         {/if}
 
@@ -177,25 +182,25 @@
                     type="search"
                     placeholder={view === "browse" ? "Search sotf-mods.com" : "Filter installed mods"}
                     bind:value={searchTerm}
-                    on:input={onSearch}
+                    oninput={onSearch}
                 />
             </div>
             <div class="segmented" role="tablist">
-                <button role="tab" class:selected={view === "browse"} aria-selected={view === "browse"} on:click={() => setView("browse")}>Browse</button>
-                <button role="tab" class:selected={view === "installed"} aria-selected={view === "installed"} on:click={() => setView("installed")}>
+                <button role="tab" class:selected={view === "browse"} aria-selected={view === "browse"} onclick={() => setView("browse")}>Browse</button>
+                <button role="tab" class:selected={view === "installed"} aria-selected={view === "installed"} onclick={() => setView("installed")}>
                     Installed
                     {#if installedMods.length}<span class="count">{installedMods.length}</span>{/if}
                     {#if updateCount}<span class="count count-update" title="{updateCount} update(s) available">{updateCount}</span>{/if}
                 </button>
             </div>
-            <button class="btn-ghost" title="Refresh" on:click={refresh} disabled={isLoading}><UilSync /></button>
+            <button class="btn-ghost" title="Refresh" onclick={refresh} disabled={isLoading}><UilSync /></button>
         </div>
 
         <div class="scroller">
             {#if visibleMods.length}
                 <div class="grid">
                     {#each visibleMods as mod (mod.mod_id ?? mod.name)}
-                        <ModCard {mod} on:changed={onModChanged} />
+                        <ModCard {mod} onchanged={onModChanged} />
                     {/each}
                 </div>
             {/if}
@@ -204,7 +209,7 @@
                 <div class="state">
                     <UilExclamationTriangle class="state-icon" />
                     <span>Couldn't load mods: {loadError}</span>
-                    <button on:click={view === "browse" ? retryBrowse : loadInstalled}>Try again</button>
+                    <button onclick={view === "browse" ? retryBrowse : loadInstalled}>Try again</button>
                 </div>
             {:else if isLoading}
                 <div class="state"><SvgSpinnersBlocksWave class="spinner" /></div>
@@ -227,7 +232,7 @@
     <div class="page">
         <div class="state muted">
             <span>Set the game location on the Loader tab to start browsing mods.</span>
-            <button class="btn-primary" on:click={() => dispatch("navigate", 0)}>Go to Loader</button>
+            <button class="btn-primary" onclick={() => onnavigate?.(0)}>Go to Loader</button>
         </div>
     </div>
 {/if}

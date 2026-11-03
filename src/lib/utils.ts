@@ -1,9 +1,9 @@
-import { invoke } from '@tauri-apps/api/tauri';
-import { exists } from '@tauri-apps/api/fs';
-import { dialog } from '@tauri-apps/api';
+import { invoke } from "@tauri-apps/api/core";
+import { exists } from "@tauri-apps/plugin-fs";
+import * as dialog from "@tauri-apps/plugin-dialog";
+import { download } from "@tauri-apps/plugin-upload";
 import { processName, processProgress } from './store';
 import { TempFileCache } from './tempFileCache';
-import { download } from 'tauri-plugin-upload-api';
 
 export async function unzip(sourcePath: string, destinationPath: string) {
     const src = sourcePath.replace(/\\/g, '/');
@@ -35,7 +35,7 @@ export async function downloadArchive(downloadUrl: string | null, downloadName: 
 
     try {
         let downloadProgress = 0;
-        await download(downloadUrl, tempPath, (progress, total) => {
+        await download(downloadUrl, tempPath, ({ progress, total }) => {
             downloadProgress += progress;
             if (total > 0) {
                 processProgress.set(Math.min(100, downloadProgress / total * 100));
@@ -61,5 +61,5 @@ export async function showMessageBox(title: string, message: string): Promise<vo
 }
 
 export async function confirmAction(title: string, message: string): Promise<boolean> {
-    return await dialog.confirm(message, { title: title, type: "warning" });
+    return await dialog.confirm(message, { title: title, kind: "warning" });
 }

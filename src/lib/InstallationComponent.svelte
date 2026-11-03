@@ -7,13 +7,17 @@
   import UilTrashAlt from "~icons/uil/trash-alt";
   import UilSync from "~icons/uil/sync";
 
-  export let feature: FeatureInstaller;
+  interface Props {
+    feature: FeatureInstaller;
+  }
 
-  let mode: InstallMode = feature.currentMode;
-  let visible = false;
-  let loading = true;
-  let remoteVersion: string | null = null;
-  let localVersion: string | null = null;
+  let { feature }: Props = $props();
+
+  let mode: InstallMode = $state(InstallMode.Install);
+  let visible = $state(false);
+  let loading = $state(true);
+  let remoteVersion: string | null = $state(null);
+  let localVersion: string | null = $state(null);
 
   async function refresh() {
     await feature.refreshMode();
@@ -81,14 +85,14 @@
 
     <div class="actions">
       {#if mode === InstallMode.Install}
-        <button class="btn-primary" on:click={() => run(InstallMode.Install)}><UilArrowCircleDown /> Install</button>
+        <button class="btn-primary" onclick={() => run(InstallMode.Install)}><UilArrowCircleDown /> Install</button>
       {:else}
         {#if mode === InstallMode.Update}
-          <button class="btn-info" on:click={() => run(InstallMode.Update)}><UilSync /> Update</button>
+          <button class="btn-info" onclick={() => run(InstallMode.Update)}><UilSync /> Update</button>
         {:else if feature.hasInstaller()}
-          <button class="btn-ghost" title="Download and install again" on:click={() => run(InstallMode.Install)}><UilSync /> Reinstall</button>
+          <button class="btn-ghost" title="Download and install again" onclick={() => run(InstallMode.Install)}><UilSync /> Reinstall</button>
         {/if}
-        <button class="btn-danger" on:click={() => run(InstallMode.Uninstall)}><UilTrashAlt /> {feature.hasInstaller() ? "Uninstall" : "Remove"}</button>
+        <button class="btn-danger" onclick={() => run(InstallMode.Uninstall)}><UilTrashAlt /> {feature.hasInstaller() ? "Uninstall" : "Remove"}</button>
       {/if}
     </div>
   </div>

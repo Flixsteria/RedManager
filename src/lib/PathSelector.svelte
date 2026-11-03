@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { dialog, path } from "@tauri-apps/api";
+    import * as path from "@tauri-apps/api/path";
+    import * as dialog from "@tauri-apps/plugin-dialog";
     import { gameExePath, isPathValid, notify, setGamePath } from "./store";
     import UilFolderOpen from "~icons/uil/folder-open";
     import UilCheckCircle from "~icons/uil/check-circle";
@@ -41,7 +42,7 @@
             placeholder="Couldn't find the game automatically. Browse to SonsOfTheForest.exe"
             title={$gameExePath}
         />
-        <button on:click={selectPath}><UilFolderOpen /> Browse</button>
+        <button onclick={selectPath}><UilFolderOpen /> Browse</button>
     </div>
 </div>
 

@@ -1,4 +1,5 @@
-import { fs, path } from "@tauri-apps/api";
+import * as path from "@tauri-apps/api/path";
+import * as fs from "@tauri-apps/plugin-fs";
 import { getDirectoryPath } from './store';
 
 export class BaseUninstaller {
@@ -35,14 +36,14 @@ export class BaseUninstaller {
         for (const folder of this.foldersToClear) {
             const folderPath = await this.getFilePath(folder);
             if (await fs.exists(folderPath)) {
-                await fs.removeDir(folderPath, { recursive: true });
+                await fs.remove(folderPath, { recursive: true });
             }
         }
 
         for (const file of this.filesToClear) {
             const filePath = await this.getFilePath(file);
             if (await fs.exists(filePath)) {
-                await fs.removeFile(filePath);
+                await fs.remove(filePath);
             }
         }
     }

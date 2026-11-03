@@ -1,75 +1,17 @@
 {
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "RedModManager",
+  "mainBinaryName": "RedModManager",
+  "version": "1.2.0",
+  "identifier": "com.tonimacaroni.redmodmanager",
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
-    "devPath": "http://localhost:1420",
-    "distDir": "../dist",
-    "withGlobalTauri": false
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420"
   },
-  "package": {
-    "productName": "RedModManager",
-    "version": "1.2.0"
-  },
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "shell": {
-        "all": true,
-        "scope": [
-          {
-            "name": "dotnet-template-check",
-            "cmd": "dotnet",
-            "args": ["new", { "validator": "\\S+" }, "-h"]
-          },
-          {
-            "name": "dotnet-install-template",
-            "cmd": "dotnet",
-            "args": ["new", "--install", "RedLoader.Templates"]
-          },
-          {
-            "name": "dotnet-install-template-new",
-            "cmd": "dotnet",
-            "args": ["new", "install", "RedLoader.Templates"]
-          },
-          {
-            "name": "dotnet-create-project",
-            "cmd": "dotnet",
-            "args": true
-          },
-          {
-            "name": "open-explorer",
-            "cmd": "explorer",
-            "args": [{ "validator": ".*" }]
-          }
-        ]
-      },
-      "fs": {
-        "all": true,
-        "scope": ["**"]
-      },
-      "dialog": {
-        "all": true
-      },
-      "path": {
-        "all": true
-      },
-      "http": {
-        "all": true,
-        "scope": ["https://github.com/*"]
-      }
-    },
-    "bundle": {
-      "active": true,
-      "targets": "all",
-      "identifier": "com.tonimacaroni.redmodmanager",
-      "icon": [
-        "icons/logo_img.png",
-        "icons/logo_icon.ico"
-      ]
-    },
-    "security": {
-      "csp": ""
-    },
+  "app": {
+    "withGlobalTauri": false,
     "windows": [
       {
         "fullscreen": false,
@@ -79,8 +21,21 @@
         "height": 720,
         "minWidth": 720,
         "minHeight": 560,
-        "center": true
+        "center": true,
+        "useHttpsScheme": true,
+        "label": "main"
       }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/logo_img.png",
+      "icons/logo_icon.ico"
     ]
   }
 }

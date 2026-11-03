@@ -1,0 +1,50 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permissions for the main RedManager window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:default",
+    "upload:allow-download",
+    "fs:read-all",
+    "fs:write-all",
+    {
+      "identifier": "fs:scope",
+      "allow": [{ "path": "**" }]
+    },
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [{ "url": "https://*" }, { "url": "steam://*" }]
+    },
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [{ "path": "**" }]
+    },
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "dotnet-template-check",
+          "cmd": "dotnet",
+          "args": ["new", { "validator": "\\S+" }, "-h"]
+        },
+        {
+          "name": "dotnet-install-template",
+          "cmd": "dotnet",
+          "args": ["new", "--install", "RedLoader.Templates"]
+        },
+        {
+          "name": "dotnet-install-template-new",
+          "cmd": "dotnet",
+          "args": ["new", "install", "RedLoader.Templates"]
+        },
+        {
+          "name": "dotnet-create-project",
+          "cmd": "dotnet",
+          "args": true
+        }
+      ]
+    }
+  ]
+}

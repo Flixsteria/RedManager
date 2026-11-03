@@ -1,7 +1,10 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { Command } from "@tauri-apps/api/shell";
-    import { dialog, fs, path, shell } from "@tauri-apps/api";
+    import * as path from "@tauri-apps/api/path";
+    import * as dialog from "@tauri-apps/plugin-dialog";
+    import * as fs from "@tauri-apps/plugin-fs";
+    import { Command } from "@tauri-apps/plugin-shell";
+    import { openPath, openUrl } from "@tauri-apps/plugin-opener";
     import { getDirectoryPath, isPathValid, notify, runTask } from "../lib/store";
     import FeatureList from "../lib/FeatureList.svelte";
     import { ueFeature } from "../lib/featureInstaller";
@@ -14,21 +17,21 @@
 
     type TemplateState = "checking" | "missing" | "installed" | "no-dotnet";
 
-    let templateState: TemplateState = "checking";
-    let modName = "MyMod";
-    let appendComments = true;
+    let templateState: TemplateState = $state("checking");
+    let modName = $state("MyMod");
+    let appendComments = $state(true);
 
     // the template uses the name for the C# namespace and class, so it has to be a valid identifier
-    $: nameError = !modName.trim()
+    let nameError = $derived(!modName.trim()
         ? "Enter a name for your mod."
         : !/^[A-Za-z_][A-Za-z0-9_]*$/.test(modName.trim())
             ? "Use letters, numbers and underscores only, starting with a letter."
-            : null;
+            : null);
 
     async function checkForTemplate() {
         templateState = "checking";
         try {
-            const result = await new Command("dotnet-template-check", ["new", "sotfmod", "-h"]).execute();
+            const result = await Command.create("dotnet-template-check", ["new", "sotfmod", "-h"]).execute();
             const output = result.stdout + result.stderr;
             templateState = result.code === 0 && !/No templates (or subcommands )?found/i.test(output) ? "installed" : "missing";
         } catch (err) {
@@ -40,10 +43,10 @@
 
     async function installTemplate() {
         await runTask("Installing RedLoader template...", async () => {
-            let result = await new Command("dotnet-install-template-new", ["new", "install", "RedLoader.Templates"]).execute();
+            let result = await Command.create("dotnet-install-template-new", ["new", "install", "RedLoader.Templates"]).execute();
             if (result.code !== 0) {
                 // .NET 6 SDKs only know the older --install syntax
-                result = await new Command("dotnet-install-template", ["new", "--install", "RedLoader.Templates"]).execute();
+                result = await Command.create("dotnet-install-template", ["new", "--install", "RedLoader.Templates"]).execute();
             }
             if (result.code !== 0) {
                 throw new Error(`Template install failed: ${(result.stderr || result.stdout).trim()}`);
@@ -73,14 +76,14 @@
                 argList.push("-c", "false");
             }
 
-            const result = await new Command("dotnet-create-project", argList).execute();
+            const result = await Command.create("dotnet-create-project", argList).execute();
             if (result.code !== 0) {
                 throw new Error(`dotnet new failed: ${(result.stderr || result.stdout).trim()}`);
             }
         }, `Created ${name}.`);
 
         if (ok) {
-            await new Command("open-explorer", [targetLocation]).execute().catch(console.log);
+            await openPath(targetLocation).catch(console.log);
         }
     }
 
@@ -101,8 +104,8 @@
             <div class="banner banner-warning">
                 <UilExclamationTriangle />
                 <span>
-                    The .NET SDK wasn't found. <button class="link" on:click={() => shell.open(SDK_URL)}>Install the .NET SDK</button>, then
-                    <button class="link" on:click={checkForTemplate}>check again</button>.
+                    The .NET SDK wasn't found. <button class="link" onclick={() => openUrl(SDK_URL)}>Install the .NET SDK</button>, then
+                    <button class="link" onclick={checkForTemplate}>check again</button>.
                 </span>
             </div>
         {:else if templateState === "missing"}
@@ -111,7 +114,7 @@
                     <span class="name">RedLoader template</span>
                     <p class="muted small">Install the dotnet template to create new mod projects.</p>
                 </div>
-                <button class="btn-primary" on:click={installTemplate}><UilArrowCircleDown /> Install Template</button>
+                <button class="btn-primary" onclick={installTemplate}><UilArrowCircleDown /> Install Template</button>
             </div>
         {:else}
             <div class="row">
@@ -137,7 +140,7 @@
             {/if}
 
             <div class="row">
-                <button class="btn-primary" disabled={!!nameError || !$isPathValid} on:click={createProject}><UilPlusCircle /> Create Project</button>
+                <button class="btn-primary" disabled={!!nameError || !$isPathValid} onclick={createProject}><UilPlusCircle /> Create Project</button>
             </div>
         {/if}
     </div>

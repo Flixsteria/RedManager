@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { fade, fly } from "svelte/transition";
-  import { invoke } from "@tauri-apps/api";
+  import { invoke } from "@tauri-apps/api/core";
   import { getVersion } from "@tauri-apps/api/app";
   import {
     dismissToast,
@@ -35,9 +35,9 @@
 
   const toastIcons = { success: UilCheckCircle, error: UilExclamationTriangle, info: UilInfoCircle };
 
-  let activeTab = 0;
-  let initializing = true;
-  let appVersion = "";
+  let activeTab = $state(0);
+  let initializing = $state(true);
+  let appVersion = $state("");
 
   function selectTab(index: number) {
     activeTab = index;
@@ -89,9 +89,9 @@
           class="tab"
           class:active={i === activeTab}
           aria-selected={i === activeTab}
-          on:click={() => selectTab(i)}
+          onclick={() => selectTab(i)}
         >
-          <svelte:component this={tab.icon} />
+          <tab.icon />
           {tab.label}
         </button>
       {/each}
@@ -104,7 +104,12 @@
     {:else}
       <!-- remount the page whenever a different game install is selected -->
       {#key $isPathValid ? $gameExePath : ""}
-        <svelte:component this={tabs[activeTab].component} on:navigate={(e) => selectTab(e.detail)} />
+        {#if tabs[activeTab].component === Mods}
+          <Mods onnavigate={selectTab} />
+        {:else}
+          {@const Page = tabs[activeTab].component}
+          <Page />
+        {/if}
       {/key}
     {/if}
   </main>
@@ -122,10 +127,11 @@
 
   <div class="toasts" aria-live="polite">
     {#each $toasts as toast (toast.id)}
+      {@const ToastIcon = toastIcons[toast.kind]}
       <div class="toast toast-{toast.kind}" transition:fly={{ y: 16, duration: 200 }}>
-        <svelte:component this={toastIcons[toast.kind]} />
+        <ToastIcon />
         <span class="toast-message">{toast.message}</span>
-        <button class="btn-ghost toast-close" aria-label="Dismiss" on:click={() => dismissToast(toast.id)}><UilTimes /></button>
+        <button class="btn-ghost toast-close" aria-label="Dismiss" onclick={() => dismissToast(toast.id)}><UilTimes /></button>
       </div>
     {/each}
   </div>

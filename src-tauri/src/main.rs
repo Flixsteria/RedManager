@@ -1,18 +1,20 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::fs::File;
 use std::fs;
+use std::fs::File;
 use zip::read::ZipArchive;
 
-use std::io::{BufReader, BufRead};
-use winreg::{RegKey, enums::*};
 use regex::Regex;
+use std::io::{BufRead, BufReader};
+use winreg::{enums::*, RegKey};
 
 use std::{env, error::Error, path::Path, path::PathBuf, ptr::null_mut};
 use windows::{
     core,
-    Win32::Storage::FileSystem::{GetFileVersionInfoSizeW, GetFileVersionInfoW, VerQueryValueW, VS_FIXEDFILEINFO},
+    Win32::Storage::FileSystem::{
+        GetFileVersionInfoSizeW, GetFileVersionInfoW, VerQueryValueW, VS_FIXEDFILEINFO,
+    },
 };
 
 const SOTF_APP_ID: &str = "1326470";
@@ -27,7 +29,11 @@ fn is_dotnet6_installed() -> Result<bool, String> {
 
     for key in keys {
         if let Ok(key) = hklm.open_subkey_with_flags(key, KEY_READ) {
-            if key.enum_values().filter_map(Result::ok).any(|(name, _)| name.starts_with("6.")) {
+            if key
+                .enum_values()
+                .filter_map(Result::ok)
+                .any(|(name, _)| name.starts_with("6."))
+            {
                 return Ok(true);
             }
         }
@@ -37,7 +43,11 @@ fn is_dotnet6_installed() -> Result<bool, String> {
     let program_files = env::var("ProgramFiles").unwrap_or_else(|_| r"C:\Program Files".into());
     let runtime_dir = Path::new(&program_files).join(r"dotnet\shared\Microsoft.NETCore.App");
     let has_runtime_dir = fs::read_dir(runtime_dir)
-        .map(|entries| entries.filter_map(Result::ok).any(|e| e.file_name().to_string_lossy().starts_with("6.")))
+        .map(|entries| {
+            entries
+                .filter_map(Result::ok)
+                .any(|e| e.file_name().to_string_lossy().starts_with("6."))
+        })
         .unwrap_or(false);
 
     Ok(has_runtime_dir)
@@ -75,44 +85,47 @@ fn get_file_description(path: impl AsRef<Path>) -> Result<String, Box<dyn Error>
             &mut ptr,
             &mut len,
         )
-    }.as_bool();
+    }
+    .as_bool();
 
     if !success {
         return Err("Failed to query file description".into());
     }
 
     let info = ptr as *const VS_FIXEDFILEINFO;
-    unsafe{
+    unsafe {
         if (*info).dwSignature != 0xfeef04bd {
             return Err("Invalid fixed file info signature".into());
         }
 
         let description = *info;
-        
-        Ok(format!("{}.{}.{}", 
+
+        Ok(format!(
+            "{}.{}.{}",
             description.dwFileVersionMS >> 16,
             description.dwFileVersionMS & 0xffff,
             description.dwFileVersionLS >> 16,
         ))
     }
-
 }
 
 #[tauri::command]
 async fn get_steam_path() -> Option<String> {
     let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    let steam_install: PathBuf = hklm.open_subkey_with_flags(r"SOFTWARE\WOW6432Node\Valve\Steam", KEY_READ)
-    .and_then(|key| key.get_value::<String, _>("InstallPath"))
-    .or_else(|_| {
-        hklm.open_subkey_with_flags(r"SOFTWARE\Valve\Steam", KEY_READ)
-            .and_then(|key| key.get_value::<String, _>("InstallPath"))
-    })
-    .or_else(|_| {
-        hkcu.open_subkey_with_flags(r"Software\Valve\Steam", KEY_READ)
-            .and_then(|key| key.get_value::<String, _>("SteamPath"))
-    }).ok()?
-    .into();
+    let steam_install: PathBuf = hklm
+        .open_subkey_with_flags(r"SOFTWARE\WOW6432Node\Valve\Steam", KEY_READ)
+        .and_then(|key| key.get_value::<String, _>("InstallPath"))
+        .or_else(|_| {
+            hklm.open_subkey_with_flags(r"SOFTWARE\Valve\Steam", KEY_READ)
+                .and_then(|key| key.get_value::<String, _>("InstallPath"))
+        })
+        .or_else(|_| {
+            hkcu.open_subkey_with_flags(r"Software\Valve\Steam", KEY_READ)
+                .and_then(|key| key.get_value::<String, _>("SteamPath"))
+        })
+        .ok()?
+        .into();
 
     let vdf = steam_install.join(r"steamapps\libraryfolders.vdf");
     if !vdf.exists() {
@@ -141,7 +154,10 @@ async fn get_steam_path() -> Option<String> {
             for line in reader.lines() {
                 if let Ok(text) = line {
                     if let Some(cap) = install_re.captures(&text) {
-                        let file_path = path.join("common").join(&cap[1]).join("SonsOfTheForest.exe");
+                        let file_path = path
+                            .join("common")
+                            .join(&cap[1])
+                            .join("SonsOfTheForest.exe");
                         if file_path.exists() {
                             return file_path.to_str().map(|s| s.to_string());
                         }
@@ -153,7 +169,6 @@ async fn get_steam_path() -> Option<String> {
 
     None
 }
-
 
 fn unzip_file(source: &str, destination: &str) -> Result<(), String> {
     let reader = File::open(source).map_err(|e| e.to_string())?;
@@ -181,7 +196,8 @@ fn unzip_file(source: &str, destination: &str) -> Result<(), String> {
             fs::remove_file(&outpath).map_err(|e| format!("{}: {}", outpath.display(), e))?;
         }
 
-        let mut outfile = File::create(&outpath).map_err(|e| format!("{}: {}", outpath.display(), e))?;
+        let mut outfile =
+            File::create(&outpath).map_err(|e| format!("{}: {}", outpath.display(), e))?;
         std::io::copy(&mut file, &mut outfile).map_err(|e| e.to_string())?;
     }
     Ok(())
@@ -194,7 +210,16 @@ fn unzip_handler(source: String, destination: String) -> Result<(), String> {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![unzip_handler, get_steam_path, is_dotnet6_installed, get_file_version])
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .invoke_handler(tauri::generate_handler![
+            unzip_handler,
+            get_steam_path,
+            is_dotnet6_installed,
+            get_file_version
+        ])
         .plugin(tauri_plugin_upload::init())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

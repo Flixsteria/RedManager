@@ -1,5 +1,7 @@
-import { fs, path, shell } from '@tauri-apps/api'
-import type { FileEntry } from '@tauri-apps/api/fs';
+import * as path from "@tauri-apps/api/path";
+import { listDir, type FileEntry } from "./files";
+import * as fs from "@tauri-apps/plugin-fs";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import semver from 'semver';
 import { getDirectoryPath, getLibsDir, getModsDir, processName } from './store';
 import { downloadArchive, unzip } from './utils';
@@ -166,7 +168,7 @@ export class ModDatabase {
     }
 
     public static async openModPage(mod: Mod): Promise<void> {
-        await shell.open(`${SITE_ENDPOINT}${mod.user.slug}/${mod.slug}`);
+        await openUrl(`${SITE_ENDPOINT}${mod.user.slug}/${mod.slug}`);
     }
 
     private static async readManifest(folderPath: string): Promise<ModManifest | null> {
@@ -194,7 +196,7 @@ export class ModDatabase {
     private static async scanDirectory(dir: string, gameDir: string, gameFiles: FileEntry[]): Promise<InstalledMod[]> {
         let files: FileEntry[];
         try {
-            files = await fs.readDir(dir);
+            files = await listDir(dir);
         } catch (error) {
             console.log(`failed to read ${dir}`, error);
             return [];
@@ -235,7 +237,7 @@ export class ModDatabase {
             // zip was extracted into its own folder: Mods/<wrapper>/<name>.dll + Mods/<wrapper>/<name>/
             let inner: FileEntry[];
             try {
-                inner = await fs.readDir(entry.path);
+                inner = await listDir(entry.path);
             } catch {
                 continue;
             }
@@ -253,7 +255,7 @@ export class ModDatabase {
         const gameDir = await getDirectoryPath();
         let gameFiles: FileEntry[] = [];
         try {
-            gameFiles = await fs.readDir(gameDir);
+            gameFiles = await listDir(gameDir);
         } catch (error) {
             console.log(`failed to read ${gameDir}`, error);
         }
@@ -279,8 +281,8 @@ export class ModDatabase {
         if (await fs.exists(targetDll)) throw new Error(`${targetDll} already exists.`);
         if (sourceFolder !== targetFolder && await fs.exists(targetFolder)) throw new Error(`${targetFolder} already exists.`);
 
-        await fs.renameFile(sourceDll, targetDll);
-        if (sourceFolder !== targetFolder) await fs.renameFile(sourceFolder, targetFolder);
+        await fs.rename(sourceDll, targetDll);
+        if (sourceFolder !== targetFolder) await fs.rename(sourceFolder, targetFolder);
 
         if (mod.layoutIssue === "nested") await this.removeIfEmpty(mod.folder);
 
@@ -289,7 +291,7 @@ export class ModDatabase {
 
     private static async removeIfEmpty(dir: string): Promise<void> {
         try {
-            if ((await fs.readDir(dir)).length === 0) await fs.removeDir(dir);
+            if ((await fs.readDir(dir)).length === 0) await fs.remove(dir);
         } catch (error) {
             console.log(`failed to clean up ${dir}`, error);
         }
@@ -336,11 +338,11 @@ export class ModDatabase {
         const gameDir = await getDirectoryPath();
         // staging inside the game folder keeps the final move on the same drive
         const staging = await path.join(gameDir, `_RedManagerTemp_${Date.now()}`);
-        await fs.createDir(staging, { recursive: true });
+        await fs.mkdir(staging, { recursive: true });
 
         try {
             await unzip(zipPath, staging);
-            const tree = await fs.readDir(staging, { recursive: true });
+            const tree = await listDir(staging, true);
             const pairs = await this.findModPairs(tree, false);
 
             if (pairs.length === 0) {
@@ -357,15 +359,15 @@ export class ModDatabase {
                 const targetDll = await path.join(targetDir, await path.basename(pair.dll));
                 const targetFolder = await path.join(targetDir, name);
                 for (const stale of [targetDll, await path.join(targetDir, name + ".disabled")]) {
-                    if (await fs.exists(stale)) await fs.removeFile(stale);
+                    if (await fs.exists(stale)) await fs.remove(stale);
                 }
-                if (await fs.exists(targetFolder)) await fs.removeDir(targetFolder, { recursive: true });
+                if (await fs.exists(targetFolder)) await fs.remove(targetFolder, { recursive: true });
 
-                await fs.renameFile(pair.dll, targetDll);
-                await fs.renameFile(pair.folder, targetFolder);
+                await fs.rename(pair.dll, targetDll);
+                await fs.rename(pair.folder, targetFolder);
             }
         } finally {
-            await fs.removeDir(staging, { recursive: true }).catch(console.log);
+            await fs.remove(staging, { recursive: true }).catch(console.log);
         }
     }
 
@@ -401,8 +403,8 @@ export class ModDatabase {
         const modsDir = await getModsDir();
         for (const dll of dlls) {
             const target = await path.join(modsDir, dll.name!);
-            if (await fs.exists(target)) await fs.removeFile(target);
-            await fs.renameFile(dll.path, target);
+            if (await fs.exists(target)) await fs.remove(target);
+            await fs.rename(dll.path, target);
         }
     }
 
@@ -415,8 +417,8 @@ export class ModDatabase {
     public static async uninstallMod(mod: InstalledMod): Promise<void> {
         const [modDllPath, modFolder] = await this.getPathsForMod(mod);
 
-        if (await fs.exists(modDllPath)) await fs.removeFile(modDllPath);
-        if (await fs.exists(modFolder)) await fs.removeDir(modFolder, { recursive: true });
+        if (await fs.exists(modDllPath)) await fs.remove(modDllPath);
+        if (await fs.exists(modFolder)) await fs.remove(modFolder, { recursive: true });
         if (mod.layoutIssue === "nested") await this.removeIfEmpty(mod.folder);
 
         await this.loadInstalledMods();
@@ -427,10 +429,10 @@ export class ModDatabase {
         const modDisabledPath = await path.join(mod.dllFolder, `${mod.modName}.disabled`);
 
         if (shouldEnable && (await fs.exists(modDisabledPath))) {
-            await fs.renameFile(modDisabledPath, modDllPath);
+            await fs.rename(modDisabledPath, modDllPath);
             mod.isEnabled = true;
         } else if (!shouldEnable && (await fs.exists(modDllPath))) {
-            await fs.renameFile(modDllPath, modDisabledPath);
+            await fs.rename(modDllPath, modDisabledPath);
             mod.isEnabled = false;
         }
     }
